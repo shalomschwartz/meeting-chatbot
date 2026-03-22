@@ -96,14 +96,14 @@ function buildPdfHtml(data, baseUrl) {
   <div class="page">
     <img class="bg" src="${baseUrl}/bg00001.jpg" />
 
-    <span style="position:absolute;top:132.6px;left:66.5px;z-index:1;font-size:10px;direction:ltr;">${data.date}</span>
-    <span style="position:absolute;top:165.6px;right:26px;z-index:1;font-size:10px;direction:rtl;">לכבוד רשימת התפוצה</span>
-    <span style="position:absolute;top:199.9px;left:0;width:${PAGE_W}px;text-align:center;z-index:1;font-weight:bold;font-size:10.5px;direction:rtl;">
+    <span style="position:absolute;top:132.6px;left:66.5px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:ltr;">${data.date}</span>
+    <span style="position:absolute;top:165.6px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">לכבוד רשימת התפוצה</span>
+    <span style="position:absolute;top:199.9px;left:0;width:${PAGE_W}px;text-align:center;z-index:1;font-weight:bold;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">
       הנדון – ${data.project} – סיכום פגישה שבועית - מתאריך ${data.date}
     </span>
-    <span style="position:absolute;top:234.5px;right:26px;z-index:1;font-size:10px;direction:rtl;">משתתפים : ${data.participants}</span>
-    ${data.description ? `<span style="position:absolute;top:268.9px;right:26px;z-index:1;font-size:10px;direction:rtl;max-width:600px;">בשלב ביצוע הפגישה : ${data.description}</span>` : ''}
-    <span style="position:absolute;top:290.2px;right:26px;z-index:1;font-size:10px;direction:rtl;">להלן הסיכומים:-</span>
+    <span style="position:absolute;top:234.5px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">משתתפים : ${data.participants}</span>
+    ${data.description ? `<span style="position:absolute;top:268.9px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;max-width:600px;">בשלב ביצוע הפגישה : ${data.description}</span>` : ''}
+    <span style="position:absolute;top:290.2px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">להלן הסיכומים:-</span>
 
     ${makeTable(P1_TABLE_TOP, makeRows(page1Tasks, 0, P1_ROW_H, P1_MAX))}
   </div>`;
