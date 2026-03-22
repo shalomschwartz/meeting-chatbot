@@ -9,12 +9,12 @@ function buildPdfHtml(data, baseUrl) {
   const TABLE_W      = 643.454102;
   const HEADER_ROW_H = 27.362671;
 
-  // Column widths matching the background image grid lines exactly
+  // Column widths from the original template (exact values from HTML source)
   // RTL visual order (right→left): אחריות | לביצוע עד | הסיכום | ס'פ
-  const COL_RESP = 103;   // אחריות
-  const COL_DATE = 103;   // לביצוע עד
-  const COL_DESC = 392;   // הסיכום  (wide)
-  const COL_NUM  = 45;    // ס'פ     (narrow)
+  const COL_RESP = 71;    // אחריות
+  const COL_DATE = 71;    // לביצוע עד
+  const COL_DESC = 466;   // הסיכום (305.9 + the ~160px extra space in the template)
+  const COL_NUM  = 35;    // ס'פ
 
   // Page 1: table starts lower (below date/subject/participants text)
   const P1_TABLE_TOP = 324.577484;
@@ -92,7 +92,7 @@ function buildPdfHtml(data, baseUrl) {
 
     <span style="position:absolute;top:132.6px;left:66.5px;z-index:1;font-size:10px;direction:ltr;">${data.date}</span>
     <span style="position:absolute;top:165.6px;right:26px;z-index:1;font-size:10px;direction:rtl;">לכבוד רשימת התפוצה</span>
-    <span style="position:absolute;top:199.9px;left:0;width:${PAGE_W}px;text-align:center;z-index:1;font-weight:bold;text-decoration:underline;font-size:10.5px;direction:rtl;">
+    <span style="position:absolute;top:199.9px;left:0;width:${PAGE_W}px;text-align:center;z-index:1;font-weight:bold;font-size:10.5px;direction:rtl;">
       הנדון – ${data.project} – סיכום פגישה שבועית - מתאריך ${data.date}
     </span>
     <span style="position:absolute;top:234.5px;right:26px;z-index:1;font-size:10px;direction:rtl;">משתתפים : ${data.participants}</span>
@@ -117,7 +117,30 @@ function buildPdfHtml(data, baseUrl) {
 <body>
   ${page1}
   ${page2}
-  <script>window.onload = () => window.print();</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    window.onload = async () => {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [794, 1123] });
+      const pages = document.querySelectorAll('.page');
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          width: 794,
+          height: 1123,
+          scrollX: 0,
+          scrollY: 0
+        });
+        if (i > 0) pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 794, 1123);
+      }
+      pdf.save('meeting-summary.pdf');
+      setTimeout(() => window.close(), 500);
+    };
+  </script>
 </body>
 </html>`;
 }
