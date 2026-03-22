@@ -2,72 +2,155 @@ import { useState, useRef, useEffect } from 'react';
 
 const INITIAL_MSG = 'שלום! 👋 אני כאן לעזור לתעד את סיכום הפגישה וליצור ממנו PDF.\n\nנתחיל — מה שם הפרויקט?';
 
-const COMPANY_NAME     = process.env.NEXT_PUBLIC_COMPANY_NAME     || 'REUVEN HOCHMAN 1990 Ltd';
-const COMPANY_SUBTITLE = process.env.NEXT_PUBLIC_COMPANY_SUBTITLE || 'Building Construction';
-const COMPANY_FOOTER   = process.env.NEXT_PUBLIC_COMPANY_FOOTER   || 'P.O.B. 3095 Herzliya | Tel. 09-9514920 | Fax. 09-9581351 | dan@dhbld.com';
+function buildPdfHtml(data, baseUrl) {
+  // Exact coordinates from the original template (794×1123px A4 page)
+  const PAGE_W = 794;
+  const TABLE_LEFT = 67.757309;
+  const TABLE_TOP  = 324.577484;
+  const TABLE_W    = 643.454102;
+  const TABLE_H    = 663.196411;
+  const HEADER_ROW_H = 27.362671;
 
-function buildPdfHtml(data) {
-  const rows = data.tasks.map((task, i) => `
+  // Column widths (left→right in pixel space = rightmost→leftmost visually in RTL)
+  // Visual RTL order: אחריות | לביצוע עד | הסיכום | ס'פ
+  const COL_NUM  = 40;    // ס'פ   — leftmost in HTML / rightmost visually
+  const COL_DESC = 371;   // הסיכום
+  const COL_DATE = 116;   // לביצוע עד
+  const COL_RESP = 116;   // אחריות — rightmost in HTML / leftmost visually
+  // total = 643 ✓
+
+  const DATA_ROWS_H = TABLE_H - HEADER_ROW_H;
+  const MAX_ROWS    = 10;
+  const ROW_H       = DATA_ROWS_H / MAX_ROWS; // ~63.6px per row
+
+  const tasks = data.tasks.slice(0, MAX_ROWS);
+
+  const rows = tasks.map((task, i) => `
     <tr>
-      <td class="col-resp">${task.responsible}</td>
-      <td class="col-date">${task.dueDate}</td>
-      <td class="col-desc">${task.description}</td>
-      <td class="col-num">${i + 1}</td>
+      <td style="width:${COL_RESP}px;text-align:center;vertical-align:middle;padding:3px 5px;font-size:9.5px;">${task.responsible}</td>
+      <td style="width:${COL_DATE}px;text-align:center;vertical-align:middle;padding:3px 5px;font-size:9.5px;">${task.dueDate}</td>
+      <td style="width:${COL_DESC}px;text-align:right;vertical-align:middle;padding:3px 8px;font-size:9.5px;direction:rtl;">${task.description}</td>
+      <td style="width:${COL_NUM}px;text-align:center;vertical-align:middle;padding:3px 5px;font-size:9.5px;">${i + 1}</td>
+    </tr>`).join('');
+
+  // Fill remaining empty rows so background grid is fully covered
+  const emptyRows = Array.from({ length: MAX_ROWS - tasks.length }, (_, i) => `
+    <tr>
+      <td style="width:${COL_RESP}px;height:${ROW_H}px;"></td>
+      <td style="width:${COL_DATE}px;"></td>
+      <td style="width:${COL_DESC}px;"></td>
+      <td style="width:${COL_NUM}px;"></td>
     </tr>`).join('');
 
   return `<!DOCTYPE html>
-<html dir="rtl" lang="he">
+<html lang="he">
 <head>
   <meta charset="UTF-8">
   <style>
+    @page { size: A4; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, 'Segoe UI', sans-serif; direction: rtl; font-size: 11pt; color: #000; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
-    .company-box { background: #1e3a5f; color: white; padding: 10px 18px; text-align: center; min-width: 220px; }
-    .company-name { font-size: 15pt; font-weight: bold; letter-spacing: 0.5px; }
-    .company-subtitle { font-size: 7.5pt; letter-spacing: 3px; margin-top: 4px; }
-    .date-block { font-size: 10.5pt; padding-top: 4px; }
-    .to { margin: 14px 0 8px; font-size: 11pt; }
-    .subject { text-align: center; font-size: 12.5pt; font-weight: bold; text-decoration: underline; margin: 12px 0; }
-    .participants { margin: 9px 0; font-size: 11pt; }
-    .meeting-desc { margin: 9px 0; font-size: 11pt; }
-    .list-header { margin: 14px 0 6px; font-size: 11pt; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #f0f0f0; border: 1px solid #000; padding: 6px 5px; font-weight: bold; font-size: 10.5pt; text-align: center; }
-    td { border: 1px solid #000; padding: 6px 5px; font-size: 10pt; vertical-align: top; }
-    .col-num  { text-align: center; width: 32px; }
-    .col-date { text-align: center; width: 85px; }
-    .col-resp { text-align: center; width: 110px; }
-    .col-desc { text-align: right; }
-    .footer { position: fixed; bottom: 6mm; left: 0; right: 0; text-align: center; font-size: 9pt; color: #333; border-top: 1px solid #aaa; padding-top: 4px; margin: 0 12mm; }
-    @media print { body { margin: 15mm; } }
+    html, body { width: ${PAGE_W}px; height: 1123px; overflow: hidden; }
+    body {
+      position: relative;
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      color: #000;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    /* Full-page background image — the actual letterhead */
+    .bg {
+      position: absolute; top: 0; left: 0;
+      width: ${PAGE_W}px; height: 1123px;
+      z-index: 0;
+    }
+    /* Text overlay layer */
+    .layer {
+      position: absolute; top: 0; left: 0;
+      width: ${PAGE_W}px; height: 1123px;
+      z-index: 1;
+    }
+    /* Tasks table overlaid on top of the background grid */
+    .task-table {
+      position: absolute;
+      top: ${TABLE_TOP}px;
+      left: ${TABLE_LEFT}px;
+      width: ${TABLE_W}px;
+      border-collapse: collapse;
+      direction: rtl;
+    }
+    .task-table th, .task-table td {
+      border: 1px solid #000;
+      background: transparent;
+    }
+    .task-table thead tr {
+      height: ${HEADER_ROW_H}px;
+    }
+    .task-table thead th {
+      font-size: 10px;
+      font-weight: bold;
+      text-align: center;
+      vertical-align: middle;
+      padding: 2px 4px;
+    }
+    .task-table tbody tr {
+      height: ${ROW_H}px;
+    }
+    @media print {
+      html, body { width: ${PAGE_W}px; height: 1123px; }
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="date-block">${data.date}</div>
-    <div class="company-box">
-      <div class="company-name">${COMPANY_NAME}</div>
-      <div class="company-subtitle">${COMPANY_SUBTITLE}</div>
-    </div>
+
+  <!-- Original letterhead background (logo, chevron, footer) -->
+  <img class="bg" src="${baseUrl}/bg00001.jpg" />
+
+  <div class="layer">
+
+    <!-- Date — top left, LTR -->
+    <span style="position:absolute;top:132.6px;left:66.5px;font-size:10px;direction:ltr;">${data.date}</span>
+
+    <!-- לכבוד רשימת התפוצה — right-aligned -->
+    <span style="position:absolute;top:165.6px;right:26px;font-size:10px;direction:rtl;">לכבוד רשימת התפוצה</span>
+
+    <!-- Subject line — centered, bold, underlined -->
+    <span style="position:absolute;top:199.9px;left:0;width:${PAGE_W}px;text-align:center;font-weight:bold;text-decoration:underline;font-size:10.5px;direction:rtl;">
+      הנדון – ${data.project} – סיכום פגישה שבועית - מתאריך ${data.date}
+    </span>
+
+    <!-- Participants -->
+    <span style="position:absolute;top:234.5px;right:26px;font-size:10px;direction:rtl;">
+      משתתפים : ${data.participants}
+    </span>
+
+    <!-- Optional description -->
+    ${data.description ? `
+    <span style="position:absolute;top:268.9px;right:26px;font-size:10px;direction:rtl;max-width:600px;">
+      בשלב ביצוע הפגישה : ${data.description}
+    </span>` : ''}
+
+    <!-- להלן הסיכומים -->
+    <span style="position:absolute;top:290.2px;right:26px;font-size:10px;direction:rtl;">להלן הסיכומים:-</span>
+
   </div>
-  <div class="to">לכבוד רשימת התפוצה</div>
-  <div class="subject">הנדון – ${data.project} – סיכום פגישה שבועית - מתאריך ${data.date}</div>
-  <div class="participants"><strong>משתתפים:</strong> ${data.participants}</div>
-  ${data.description ? `<div class="meeting-desc">בשלב ביצוע הפגישה: ${data.description}</div>` : ''}
-  <div class="list-header">להלן הסיכומים:-</div>
-  <table>
+
+  <!-- Tasks table, overlaid on the background grid -->
+  <table class="task-table">
     <thead>
       <tr>
-        <th class="col-resp">אחריות</th>
-        <th class="col-date">לביצוע עד...</th>
-        <th class="col-desc">הסיכום</th>
-        <th class="col-num">ס'פ</th>
+        <th style="width:${COL_RESP}px;">אחריות</th>
+        <th style="width:${COL_DATE}px;">לביצוע עד...</th>
+        <th style="width:${COL_DESC}px;">הסיכום</th>
+        <th style="width:${COL_NUM}px;">ס'פ</th>
       </tr>
     </thead>
-    <tbody>${rows}</tbody>
+    <tbody>
+      ${rows}
+      ${emptyRows}
+    </tbody>
   </table>
-  <div class="footer">${COMPANY_FOOTER}</div>
+
   <script>window.onload = () => window.print();</script>
 </body>
 </html>`;
@@ -131,7 +214,7 @@ export default function Home() {
   }
 
   function generatePDF() {
-    const html = buildPdfHtml(pdfData);
+    const html = buildPdfHtml(pdfData, window.location.origin);
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
