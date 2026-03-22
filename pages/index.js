@@ -98,7 +98,7 @@ function buildPdfHtml(data, baseUrl) {
 
     <span style="position:absolute;top:132.6px;left:66.5px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:ltr;">${data.date}</span>
     <span style="position:absolute;top:165.6px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">לכבוד רשימת התפוצה</span>
-    <div style="position:absolute;top:199.9px;left:0;width:${PAGE_W}px;text-align:center;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">הנדון – <strong>${data.project} – סיכום פגישה שבועית - מתאריך ${data.date}</strong></div>
+    <div style="position:absolute;top:199.9px;left:0;width:${PAGE_W}px;text-align:center;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;"><span style="background:white;padding:0 12px 3px 0;">הנדון – </span><strong>${data.project} – סיכום פגישה שבועית - מתאריך ${data.date}</strong></div>
     <span style="position:absolute;top:234.5px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">משתתפים : ${data.participants}</span>
     ${data.description ? `<span style="position:absolute;top:268.9px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;max-width:600px;">בשלב ביצוע הפגישה : ${data.description}</span>` : ''}
     <span style="position:absolute;top:290.2px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">להלן הסיכומים:-</span>
