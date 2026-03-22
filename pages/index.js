@@ -42,10 +42,10 @@ function buildPdfHtml(data, bg1, bg2) {
   function makeRows(tasks, startIdx, rowH, maxRows) {
     const filled = tasks.map((task, i) => `
     <tr style="height:${rowH}px;">
-      <td style="width:${COL_RESP}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:14px;font-family:Arial,sans-serif;background:white;word-wrap:break-word;">${task.responsible}</td>
-      <td style="width:${COL_DATE}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:14px;font-family:Arial,sans-serif;background:white;">${task.dueDate}</td>
-      <td style="width:${COL_DESC}px;text-align:right;vertical-align:middle;padding:3px 8px;font-size:14px;font-family:Arial,sans-serif;background:white;direction:rtl;word-wrap:break-word;">${task.description}</td>
-      <td style="width:${COL_NUM}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:14px;font-family:Arial,sans-serif;background:white;">${startIdx + i + 1}</td>
+      <td style="width:${COL_RESP}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:14px;font-family:Arial,sans-serif;background:white;border:1px solid #000;word-wrap:break-word;">${task.responsible}</td>
+      <td style="width:${COL_DATE}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:14px;font-family:Arial,sans-serif;background:white;border:1px solid #000;">${task.dueDate}</td>
+      <td style="width:${COL_DESC}px;text-align:right;vertical-align:middle;padding:3px 8px;font-size:14px;font-family:Arial,sans-serif;background:white;border:1px solid #000;direction:rtl;word-wrap:break-word;">${task.description}</td>
+      <td style="width:${COL_NUM}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:14px;font-family:Arial,sans-serif;background:white;border:1px solid #000;">${startIdx + i + 1}</td>
     </tr>`).join('');
 
     const empty = Array.from({ length: maxRows - tasks.length }, () => `
