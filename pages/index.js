@@ -9,12 +9,12 @@ function buildPdfHtml(data, baseUrl) {
   const TABLE_W      = 643.454102;
   const HEADER_ROW_H = 27.362671;
 
-  // Column widths from the original template (exact values from HTML source)
-  // RTL visual order (right→left): אחריות | לביצוע עד | הסיכום | ס'פ
-  const COL_RESP = 71;    // אחריות
-  const COL_DATE = 71;    // לביצוע עד
-  const COL_DESC = 466;   // הסיכום (305.9 + the ~160px extra space in the template)
+  // Column widths — physical left→right: ס'פ | הסיכום | לביצוע עד | אחריות
   const COL_NUM  = 35;    // ס'פ
+  const COL_DESC = 360;   // הסיכום
+  const COL_DATE = 124;   // לביצוע עד
+  const COL_RESP = 124;   // אחריות
+  // total = 643 ✓
 
   // Page 1: table starts lower (below date/subject/participants text)
   const P1_TABLE_TOP = 324.577484;
@@ -40,7 +40,7 @@ function buildPdfHtml(data, baseUrl) {
 
   function makeRows(tasks, startIdx, rowH, maxRows) {
     const filled = tasks.map((task, i) => `
-    <tr style="height:${rowH}px;">
+    <tr>
       <td style="width:${COL_NUM}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:9.5px;background:white;">${startIdx + i + 1}</td>
       <td style="width:${COL_DESC}px;text-align:right;vertical-align:middle;padding:3px 8px;font-size:9.5px;background:white;direction:rtl;">${task.description}</td>
       <td style="width:${COL_DATE}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:9.5px;background:white;">${task.dueDate}</td>
