@@ -32,20 +32,20 @@ function buildPdfHtml(data, baseUrl) {
   const P2_ROW_H     = P2_DATA_H / P2_MAX;
 
   const tdStyle = (w, align = 'center') =>
-    `style="width:${w}px;text-align:${align};vertical-align:middle;padding:3px 6px;font-size:9.5px;background:white;"`;
+    `style="width:${w}px;text-align:${align};vertical-align:middle;padding:3px 6px;font-size:14px;font-family:Arial,sans-serif;background:white;"`;
 
   // Columns in physical left→right order matching original template:
   // אחריות | לביצוע עד | הסיכום (wide) | ס'פ
   const th = (w, label) =>
-    `<th style="width:${w}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">${label}</th>`;
+    `<th style="width:${w}px;border:1px solid #000;font-size:14px;font-family:Arial,sans-serif;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">${label}</th>`;
 
   function makeRows(tasks, startIdx, rowH, maxRows) {
     const filled = tasks.map((task, i) => `
     <tr style="height:${rowH}px;">
-      <td style="width:${COL_RESP}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:9.5px;background:white;word-wrap:break-word;">${task.responsible}</td>
-      <td style="width:${COL_DATE}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:9.5px;background:white;">${task.dueDate}</td>
-      <td style="width:${COL_DESC}px;text-align:right;vertical-align:middle;padding:3px 8px;font-size:9.5px;background:white;direction:rtl;word-wrap:break-word;">${task.description}</td>
-      <td style="width:${COL_NUM}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:9.5px;background:white;">${startIdx + i + 1}</td>
+      <td style="width:${COL_RESP}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:14px;font-family:Arial,sans-serif;background:white;word-wrap:break-word;">${task.responsible}</td>
+      <td style="width:${COL_DATE}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:14px;font-family:Arial,sans-serif;background:white;">${task.dueDate}</td>
+      <td style="width:${COL_DESC}px;text-align:right;vertical-align:middle;padding:3px 8px;font-size:14px;font-family:Arial,sans-serif;background:white;direction:rtl;word-wrap:break-word;">${task.description}</td>
+      <td style="width:${COL_NUM}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:14px;font-family:Arial,sans-serif;background:white;">${startIdx + i + 1}</td>
     </tr>`).join('');
 
     const empty = Array.from({ length: maxRows - tasks.length }, () => `
@@ -66,7 +66,7 @@ function buildPdfHtml(data, baseUrl) {
     <thead>
       <tr style="height:${HEADER_ROW_H}px;">
         ${th(COL_RESP, 'אחריות')}
-        ${th(COL_DATE, 'לביצוע עד...')}
+        ${th(COL_DATE, 'לביצוע עד')}
         ${th(COL_DESC, 'הסיכום')}
         ${th(COL_NUM,  "ס'פ")}
       </tr>
