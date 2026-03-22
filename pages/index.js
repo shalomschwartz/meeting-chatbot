@@ -204,9 +204,8 @@ export default function Home() {
         container.appendChild(document.adoptNode(page));
       });
 
-      // Images are base64 so they're already loaded — no need to wait
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [794, 1123] });
-      const pages = container.querySelectorAll('.page');
+      const pages = Array.from(container.children);
 
       for (let i = 0; i < pages.length; i++) {
         const canvas = await html2canvas(pages[i], {
