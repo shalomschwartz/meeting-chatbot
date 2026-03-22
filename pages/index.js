@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 
 const INITIAL_MSG = 'שלום! 👋 אני כאן לעזור לתעד את סיכום הפגישה וליצור ממנו PDF.\n\nנתחיל — מה שם הפרויקט?';
 
-function buildPdfHtml(data, baseUrl) {
+function buildPdfHtml(data, bg1, bg2) {
   const PAGE_W       = 794;
   const PAGE_H       = 1123;
   const TABLE_LEFT   = 67.757309;
@@ -94,7 +94,7 @@ function buildPdfHtml(data, baseUrl) {
 
   const page1 = `
   <div class="page">
-    <img class="bg" src="${baseUrl}/bg00001.jpg" />
+    <img class="bg" src="${bg1}" />
 
     <span style="position:absolute;top:132.6px;left:66.5px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:ltr;">${data.date}</span>
     <span style="position:absolute;top:165.6px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">לכבוד רשימת התפוצה</span>
@@ -108,7 +108,7 @@ function buildPdfHtml(data, baseUrl) {
 
   const page2 = needsPage2 ? `
   <div class="page">
-    <img class="bg" src="${baseUrl}/bg00002.jpg" />
+    <img class="bg" src="${bg2}" />
     ${makeTable(P2_TABLE_TOP, makeRows(page2Tasks, P1_MAX, P2_ROW_H, P2_MAX))}
   </div>` : '';
 
@@ -194,9 +194,16 @@ export default function Home() {
         import('jspdf').then(m => ({ jsPDF: m.jsPDF }))
       ]);
 
-      // Parse the PDF HTML and move elements into the main document
-      // (html2canvas can't render elements from a different document / iframe)
-      const html = buildPdfHtml(pdfData, window.location.origin);
+      // Convert background images to base64 to bypass any CORS restrictions
+      const toBase64 = url => fetch(url).then(r => r.blob()).then(blob => new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.onerror = rej;
+        reader.readAsDataURL(blob);
+      }));
+      const [bg1, bg2] = await Promise.all([toBase64('/bg00001.jpg'), toBase64('/bg00002.jpg')]);
+
+      const html = buildPdfHtml(pdfData, bg1, bg2);
       const parser = new DOMParser();
       const parsed = parser.parseFromString(html, 'text/html');
 
@@ -208,24 +215,17 @@ export default function Home() {
       container.style.cssText = 'position:fixed;top:0;left:-9999px;z-index:-1;width:794px;';
       document.body.appendChild(container);
 
-      // Move .page divs into the main document
       parsed.querySelectorAll('.page').forEach(page => {
         container.appendChild(document.adoptNode(page));
       });
 
-      // Wait for background images to load
-      await Promise.all(
-        Array.from(container.querySelectorAll('img')).map(img =>
-          img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
-        )
-      );
-
+      // Images are base64 so they're already loaded — no need to wait
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [794, 1123] });
       const pages = container.querySelectorAll('.page');
 
       for (let i = 0; i < pages.length; i++) {
         const canvas = await html2canvas(pages[i], {
-          scale: 2, useCORS: true, width: 794, height: 1123,
+          scale: 2, useCORS: false, width: 794, height: 1123,
           windowWidth: 794, windowHeight: 1123, scrollX: 0, scrollY: 0
         });
         if (i > 0) pdf.addPage();
@@ -235,7 +235,7 @@ export default function Home() {
       pdf.save(`סיכום-פגישה-${pdfData.date || ''}.pdf`);
     } catch (e) {
       console.error(e);
-      alert('שגיאה ביצירת ה-PDF — נסה שוב');
+      alert('שגיאה ביצירת ה-PDF:\n' + (e?.message || e));
     } finally {
       if (container.parentNode) document.body.removeChild(container);
       if (tmpStyle.parentNode) document.head.removeChild(tmpStyle);
