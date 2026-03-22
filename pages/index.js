@@ -195,8 +195,9 @@ export default function Home() {
       const parser = new DOMParser();
       const parsed = parser.parseFromString(html, 'text/html');
 
-      // Hidden off-screen container — all styles are inline, no style injection needed
-      container.style.cssText = 'position:fixed;top:0;left:-9999px;width:794px;';
+      // Container must be within viewport for html2canvas to render it.
+      // z-index:-1 keeps it behind the chat UI.
+      container.style.cssText = 'position:fixed;top:0;left:0;width:794px;z-index:-1;pointer-events:none;';
       document.body.appendChild(container);
 
       parsed.querySelectorAll('body > div').forEach(page => {
