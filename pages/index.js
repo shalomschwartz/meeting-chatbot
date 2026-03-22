@@ -33,21 +33,26 @@ function buildPdfHtml(data, baseUrl) {
   const tdStyle = (w, align = 'center') =>
     `style="width:${w}px;text-align:${align};vertical-align:middle;padding:3px 6px;font-size:9.5px;background:white;"`;
 
+  // Columns in explicit physical left→right order (no CSS direction tricks):
+  // ס'פ (leftmost) | הסיכום (wide) | לביצוע עד | אחריות (rightmost)
+  const th = (w, label) =>
+    `<th style="width:${w}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">${label}</th>`;
+
   function makeRows(tasks, startIdx, rowH, maxRows) {
     const filled = tasks.map((task, i) => `
     <tr style="height:${rowH}px;">
-      <td ${tdStyle(COL_RESP)}>${task.responsible}</td>
-      <td ${tdStyle(COL_DATE)}>${task.dueDate}</td>
-      <td ${tdStyle(COL_DESC, 'right')} dir="rtl">${task.description}</td>
-      <td ${tdStyle(COL_NUM)}>${startIdx + i + 1}</td>
+      <td style="width:${COL_NUM}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:9.5px;background:white;">${startIdx + i + 1}</td>
+      <td style="width:${COL_DESC}px;text-align:right;vertical-align:middle;padding:3px 8px;font-size:9.5px;background:white;direction:rtl;">${task.description}</td>
+      <td style="width:${COL_DATE}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:9.5px;background:white;">${task.dueDate}</td>
+      <td style="width:${COL_RESP}px;text-align:center;vertical-align:middle;padding:3px 4px;font-size:9.5px;background:white;">${task.responsible}</td>
     </tr>`).join('');
 
     const empty = Array.from({ length: maxRows - tasks.length }, () => `
     <tr style="height:${rowH}px;">
-      <td style="background:white;"></td>
-      <td style="background:white;"></td>
-      <td style="background:white;"></td>
-      <td style="background:white;"></td>
+      <td style="background:white;border:1px solid #000;"></td>
+      <td style="background:white;border:1px solid #000;"></td>
+      <td style="background:white;border:1px solid #000;"></td>
+      <td style="background:white;border:1px solid #000;"></td>
     </tr>`).join('');
 
     return filled + empty;
@@ -56,16 +61,16 @@ function buildPdfHtml(data, baseUrl) {
   function makeTable(top, rows) {
     return `
   <table style="position:absolute;top:${top}px;left:${TABLE_LEFT}px;width:${TABLE_W}px;
-                border-collapse:collapse;direction:rtl;z-index:1;">
+                border-collapse:collapse;z-index:1;">
     <thead>
       <tr style="height:${HEADER_ROW_H}px;">
-        <th style="width:${COL_RESP}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">אחריות</th>
-        <th style="width:${COL_DATE}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">לביצוע עד...</th>
-        <th style="width:${COL_DESC}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">הסיכום</th>
-        <th style="width:${COL_NUM}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">ס'פ</th>
+        ${th(COL_NUM,  "ס'פ")}
+        ${th(COL_DESC, 'הסיכום')}
+        ${th(COL_DATE, 'לביצוע עד...')}
+        ${th(COL_RESP, 'אחריות')}
       </tr>
     </thead>
-    <tbody style="border:1px solid #000;">
+    <tbody>
       ${rows}
     </tbody>
   </table>`;
