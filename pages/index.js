@@ -117,30 +117,6 @@ function buildPdfHtml(data, baseUrl) {
 <body>
   ${page1}
   ${page2}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script>
-    window.onload = async () => {
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [794, 1123] });
-      const pages = document.querySelectorAll('.page');
-      for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i], {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          width: 794,
-          height: 1123,
-          scrollX: 0,
-          scrollY: 0
-        });
-        if (i > 0) pdf.addPage();
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 794, 1123);
-      }
-      pdf.save('meeting-summary.pdf');
-      setTimeout(() => window.close(), 500);
-    };
-  </script>
 </body>
 </html>`;
 }
@@ -151,6 +127,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [pdfData, setPdfData] = useState(null);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
   const chatRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -203,11 +180,52 @@ export default function Home() {
     }
   }
 
-  function generatePDF() {
-    const html = buildPdfHtml(pdfData, window.location.origin);
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
+  async function generatePDF() {
+    setPdfGenerating(true);
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf').then(m => ({ jsPDF: m.jsPDF }))
+      ]);
+
+      const html = buildPdfHtml(pdfData, window.location.origin);
+
+      // Render in a hidden iframe so images load with correct origin
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;height:2246px;border:none;visibility:hidden;';
+      document.body.appendChild(iframe);
+
+      await new Promise(resolve => {
+        iframe.onload = resolve;
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(html);
+        iframe.contentDocument.close();
+      });
+
+      // Wait for images inside the iframe to load
+      await Promise.all(
+        Array.from(iframe.contentDocument.images).map(img =>
+          img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
+        )
+      );
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [794, 1123] });
+      const pages = iframe.contentDocument.querySelectorAll('.page');
+
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], { scale: 2, useCORS: true, width: 794, height: 1123 });
+        if (i > 0) pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 794, 1123);
+      }
+
+      pdf.save(`סיכום-פגישה-${pdfData.date || ''}.pdf`);
+      document.body.removeChild(iframe);
+    } catch (e) {
+      console.error(e);
+      alert('שגיאה ביצירת ה-PDF — נסה שוב');
+    } finally {
+      setPdfGenerating(false);
+    }
   }
 
   return (
@@ -253,7 +271,9 @@ export default function Home() {
               return (
                 <div key={i} className="pdf-card">
                   <p>סיכום הפגישה מוכן לייצוא</p>
-                  <button className="pdf-btn" onClick={generatePDF}>📄 צור PDF</button>
+                  <button className="pdf-btn" onClick={generatePDF} disabled={pdfGenerating}>
+                    {pdfGenerating ? 'מייצר PDF...' : '📄 צור PDF'}
+                  </button>
                 </div>
               );
             }
