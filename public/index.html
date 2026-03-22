@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>סיכום פגישה שבועית</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f7;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      direction: rtl;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #1e3a5f;
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      flex-shrink: 0;
+    }
+
+    .header-icon { font-size: 24px; }
+
+    .header-title { font-size: 17px; font-weight: 600; }
+
+    .header-sub { font-size: 12px; opacity: 0.65; margin-top: 2px; }
+
+    /* ── Chat area ── */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ── Bubbles ── */
+    .bubble {
+      max-width: 74%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      line-height: 1.6;
+      font-size: 14.5px;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .bubble.bot {
+      background: #ffffff;
+      color: #1a1a1a;
+      align-self: flex-start;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.09);
+    }
+
+    .bubble.user {
+      background: #1e3a5f;
+      color: #ffffff;
+      align-self: flex-end;
+      border-bottom-left-radius: 4px;
+    }
+
+    .bubble.typing {
+      color: #888;
+      font-style: italic;
+      background: #fff;
+      align-self: flex-start;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.09);
+    }
+
+    /* ── PDF ready card ── */
+    .pdf-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin: 8px 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pdf-card p { color: #555; font-size: 13.5px; }
+
+    .pdf-btn {
+      background: #27ae60;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 30px;
+      font-size: 15px;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .pdf-btn:hover { background: #219a52; }
+    .pdf-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* ── Input row ── */
+    .input-row {
+      padding: 12px 14px;
+      background: #fff;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 9px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    #msgInput {
+      flex: 1;
+      padding: 10px 16px;
+      border: 1.5px solid #d0d0d0;
+      border-radius: 24px;
+      font-size: 14.5px;
+      font-family: inherit;
+      direction: rtl;
+      outline: none;
+      transition: border-color 0.2s;
+      background: #fafafa;
+    }
+
+    #msgInput:focus { border-color: #1e3a5f; background: #fff; }
+    #msgInput:disabled { background: #f0f0f0; color: #999; }
+
+    #sendBtn {
+      background: #1e3a5f;
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      padding: 10px 22px;
+      font-size: 14.5px;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+      font-weight: 500;
+    }
+
+    #sendBtn:hover { background: #2a4f80; }
+    #sendBtn:disabled { background: #bbb; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🗂️</div>
+  <div>
+    <div class="header-title">עוזר סיכום פגישות</div>
+    <div class="header-sub">תיעוד משימות וייצוא ל-PDF</div>
+  </div>
+</div>
+
+<div class="chat-area" id="chatArea"></div>
+
+<div class="input-row">
+  <input type="text" id="msgInput" placeholder="הקלד הודעה..." autocomplete="off" />
+  <button id="sendBtn" onclick="sendMessage()">שלח ▶</button>
+</div>
+
+<script>
+  const INITIAL_BOT_MSG =
+    'שלום! 👋 אני כאן לעזור לתעד את סיכום הפגישה וליצור ממנו PDF.\n\nנתחיל — מה שם הפרויקט?';
+
+  let messages  = [];
+  let done      = false;
+  let pdfData   = null;
+
+  const chatArea = document.getElementById('chatArea');
+  const msgInput = document.getElementById('msgInput');
+  const sendBtn  = document.getElementById('sendBtn');
+
+  // ── Helpers ──────────────────────────────────────────────
+  function addBubble(text, type) {
+    const div = document.createElement('div');
+    div.className = `bubble ${type}`;
+    div.textContent = text;
+    chatArea.appendChild(div);
+    chatArea.scrollTop = chatArea.scrollHeight;
+    return div;
+  }
+
+  function showTyping() {
+    return addBubble('מקליד...', 'bot typing');
+  }
+
+  function lockInput() {
+    sendBtn.disabled = true;
+    msgInput.disabled = true;
+  }
+
+  function unlockInput() {
+    sendBtn.disabled = false;
+    msgInput.disabled = false;
+    msgInput.focus();
+  }
+
+  // ── Send message ─────────────────────────────────────────
+  async function sendMessage() {
+    const text = msgInput.value.trim();
+    if (!text || done) return;
+    msgInput.value = '';
+
+    addBubble(text, 'user');
+    messages.push({ role: 'user', content: text });
+
+    lockInput();
+    const typingEl = showTyping();
+
+    try {
+      const res  = await fetch('/api/chat', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ messages })
+      });
+      const data = await res.json();
+      typingEl.remove();
+
+      if (data.error) {
+        addBubble('שגיאה מהשרת: ' + data.error, 'bot');
+        unlockInput();
+        return;
+      }
+
+      if (data.isDone) {
+        done    = true;
+        pdfData = data.data;
+        addBubble('מצוין! רשמתי את כל המשימות. ניתן עכשיו לייצא ל-PDF.', 'bot');
+        showPdfCard();
+        return;
+      }
+
+      addBubble(data.message, 'bot');
+      messages.push({ role: 'assistant', content: data.message });
+      unlockInput();
+
+    } catch (err) {
+      typingEl.remove();
+      addBubble('שגיאה בתקשורת — נסה שוב.', 'bot');
+      unlockInput();
+    }
+  }
+
+  // ── PDF card ─────────────────────────────────────────────
+  function showPdfCard() {
+    const card = document.createElement('div');
+    card.className = 'pdf-card';
+    card.innerHTML = `
+      <p>סיכום הפגישה מוכן לייצוא</p>
+      <button class="pdf-btn" id="pdfBtn" onclick="generatePDF()">📄 צור PDF</button>
+    `;
+    chatArea.appendChild(card);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  async function generatePDF() {
+    const btn = document.getElementById('pdfBtn');
+    btn.textContent = 'יוצר PDF...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/generate-pdf', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ data: pdfData })
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `סיכום-פגישה-${pdfData.date || ''}.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+      btn.textContent = '✅ PDF הורד בהצלחה!';
+
+    } catch (e) {
+      console.error(e);
+      btn.textContent = '❌ שגיאה — נסה שוב';
+      btn.disabled = false;
+    }
+  }
+
+  // ── Enter key ─────────────────────────────────────────────
+  msgInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  // ── Init: show greeting ───────────────────────────────────
+  addBubble(INITIAL_BOT_MSG, 'bot');
+  msgInput.focus();
+</script>
+</body>
+</html>
