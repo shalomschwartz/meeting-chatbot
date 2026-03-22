@@ -188,48 +188,59 @@ export default function Home() {
 
   async function generatePDF() {
     setPdfGenerating(true);
+    const container = document.createElement('div');
+    const tmpStyle = document.createElement('style');
     try {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
         import('html2canvas'),
         import('jspdf').then(m => ({ jsPDF: m.jsPDF }))
       ]);
 
+      // Parse the PDF HTML and move elements into the main document
+      // (html2canvas can't render elements from a different document / iframe)
       const html = buildPdfHtml(pdfData, window.location.origin);
+      const parser = new DOMParser();
+      const parsed = parser.parseFromString(html, 'text/html');
 
-      // Render in a hidden iframe so images load with correct origin
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;height:2246px;border:none;visibility:hidden;';
-      document.body.appendChild(iframe);
+      // Inject PDF styles temporarily
+      tmpStyle.textContent = parsed.querySelector('style').textContent;
+      document.head.appendChild(tmpStyle);
 
-      await new Promise(resolve => {
-        iframe.onload = resolve;
-        iframe.contentDocument.open();
-        iframe.contentDocument.write(html);
-        iframe.contentDocument.close();
+      // Hidden off-screen container in the main document
+      container.style.cssText = 'position:fixed;top:0;left:-9999px;z-index:-1;width:794px;';
+      document.body.appendChild(container);
+
+      // Move .page divs into the main document
+      parsed.querySelectorAll('.page').forEach(page => {
+        container.appendChild(document.adoptNode(page));
       });
 
-      // Wait for images inside the iframe to load
+      // Wait for background images to load
       await Promise.all(
-        Array.from(iframe.contentDocument.images).map(img =>
+        Array.from(container.querySelectorAll('img')).map(img =>
           img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
         )
       );
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [794, 1123] });
-      const pages = iframe.contentDocument.querySelectorAll('.page');
+      const pages = container.querySelectorAll('.page');
 
       for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i], { scale: 2, useCORS: true, width: 794, height: 1123 });
+        const canvas = await html2canvas(pages[i], {
+          scale: 2, useCORS: true, width: 794, height: 1123,
+          windowWidth: 794, windowHeight: 1123, scrollX: 0, scrollY: 0
+        });
         if (i > 0) pdf.addPage();
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 794, 1123);
       }
 
       pdf.save(`סיכום-פגישה-${pdfData.date || ''}.pdf`);
-      document.body.removeChild(iframe);
     } catch (e) {
       console.error(e);
       alert('שגיאה ביצירת ה-PDF — נסה שוב');
     } finally {
+      if (container.parentNode) document.body.removeChild(container);
+      if (tmpStyle.parentNode) document.head.removeChild(tmpStyle);
       setPdfGenerating(false);
     }
   }
