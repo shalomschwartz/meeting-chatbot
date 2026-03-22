@@ -155,7 +155,8 @@ export default function Home() {
   const inputRef = useRef(null);
 
   useEffect(() => {
-    setMessages([{ role: 'bot', text: INITIAL_MSG }]);
+    // Include apiMsg so Claude receives the greeting as conversation context
+    setMessages([{ role: 'bot', text: INITIAL_MSG, apiMsg: { role: 'assistant', content: INITIAL_MSG } }]);
   }, []);
 
   useEffect(() => {
