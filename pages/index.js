@@ -62,7 +62,7 @@ function buildPdfHtml(data, baseUrl) {
   function makeTable(top, rows) {
     return `
   <table style="position:absolute;top:${top}px;left:${TABLE_LEFT}px;width:${TABLE_W}px;
-                border-collapse:collapse;z-index:1;">
+                border-collapse:collapse;z-index:1;direction:ltr;">
     <thead>
       <tr style="height:${HEADER_ROW_H}px;">
         ${th(COL_RESP, 'אחריות')}
