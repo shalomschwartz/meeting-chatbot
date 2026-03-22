@@ -3,154 +3,116 @@ import { useState, useRef, useEffect } from 'react';
 const INITIAL_MSG = 'שלום! 👋 אני כאן לעזור לתעד את סיכום הפגישה וליצור ממנו PDF.\n\nנתחיל — מה שם הפרויקט?';
 
 function buildPdfHtml(data, baseUrl) {
-  // Exact coordinates from the original template (794×1123px A4 page)
-  const PAGE_W = 794;
-  const TABLE_LEFT = 67.757309;
-  const TABLE_TOP  = 324.577484;
-  const TABLE_W    = 643.454102;
-  const TABLE_H    = 663.196411;
+  const PAGE_W       = 794;
+  const PAGE_H       = 1123;
+  const TABLE_LEFT   = 67.757309;
+  const TABLE_W      = 643.454102;
   const HEADER_ROW_H = 27.362671;
 
-  // Column widths (left→right in pixel space = rightmost→leftmost visually in RTL)
-  // Visual RTL order: אחריות | לביצוע עד | הסיכום | ס'פ
-  const COL_NUM  = 40;    // ס'פ   — leftmost in HTML / rightmost visually
-  const COL_DESC = 371;   // הסיכום
-  const COL_DATE = 116;   // לביצוע עד
-  const COL_RESP = 116;   // אחריות — rightmost in HTML / leftmost visually
-  // total = 643 ✓
+  // Column widths — RTL visual order: אחריות | לביצוע עד | הסיכום | ס'פ
+  const COL_NUM  = 40;
+  const COL_DESC = 371;
+  const COL_DATE = 116;
+  const COL_RESP = 116;
 
-  const DATA_ROWS_H = TABLE_H - HEADER_ROW_H;
-  const MAX_ROWS    = 10;
-  const ROW_H       = DATA_ROWS_H / MAX_ROWS; // ~63.6px per row
+  // Page 1: table starts lower (below date/subject/participants text)
+  const P1_TABLE_TOP = 324.577484;
+  const P1_TABLE_H   = 663.196411;
+  const P1_DATA_H    = P1_TABLE_H - HEADER_ROW_H;
+  const P1_MAX       = 10;
+  const P1_ROW_H     = P1_DATA_H / P1_MAX;
 
-  const tasks = data.tasks.slice(0, MAX_ROWS);
+  // Page 2: table starts near top, right after the logo
+  const P2_TABLE_TOP = 128;
+  const P2_TABLE_H   = 370;
+  const P2_DATA_H    = P2_TABLE_H - HEADER_ROW_H;
+  const P2_MAX       = 5;
+  const P2_ROW_H     = P2_DATA_H / P2_MAX;
 
-  const rows = tasks.map((task, i) => `
-    <tr>
-      <td style="width:${COL_RESP}px;text-align:center;vertical-align:middle;padding:3px 5px;font-size:9.5px;">${task.responsible}</td>
-      <td style="width:${COL_DATE}px;text-align:center;vertical-align:middle;padding:3px 5px;font-size:9.5px;">${task.dueDate}</td>
-      <td style="width:${COL_DESC}px;text-align:right;vertical-align:middle;padding:3px 8px;font-size:9.5px;direction:rtl;">${task.description}</td>
-      <td style="width:${COL_NUM}px;text-align:center;vertical-align:middle;padding:3px 5px;font-size:9.5px;">${i + 1}</td>
+  const tdStyle = (w, align = 'center') =>
+    `style="width:${w}px;text-align:${align};vertical-align:middle;padding:3px 6px;font-size:9.5px;"`;
+
+  function makeRows(tasks, startIdx, rowH, maxRows) {
+    const filled = tasks.map((task, i) => `
+    <tr style="height:${rowH}px;">
+      <td ${tdStyle(COL_RESP)}>${task.responsible}</td>
+      <td ${tdStyle(COL_DATE)}>${task.dueDate}</td>
+      <td ${tdStyle(COL_DESC, 'right')} dir="rtl">${task.description}</td>
+      <td ${tdStyle(COL_NUM)}>${startIdx + i + 1}</td>
     </tr>`).join('');
 
-  // Fill remaining empty rows so background grid is fully covered
-  const emptyRows = Array.from({ length: MAX_ROWS - tasks.length }, (_, i) => `
-    <tr>
-      <td style="width:${COL_RESP}px;height:${ROW_H}px;"></td>
-      <td style="width:${COL_DATE}px;"></td>
-      <td style="width:${COL_DESC}px;"></td>
-      <td style="width:${COL_NUM}px;"></td>
+    const empty = Array.from({ length: maxRows - tasks.length }, () => `
+    <tr style="height:${rowH}px;">
+      <td></td><td></td><td></td><td></td>
     </tr>`).join('');
+
+    return filled + empty;
+  }
+
+  function makeTable(top, rows) {
+    return `
+  <table style="position:absolute;top:${top}px;left:${TABLE_LEFT}px;width:${TABLE_W}px;
+                border-collapse:collapse;direction:rtl;z-index:1;">
+    <thead>
+      <tr style="height:${HEADER_ROW_H}px;">
+        <th style="width:${COL_RESP}px;border:1px solid #000;font-size:10px;text-align:center;vertical-align:middle;padding:2px 4px;">אחריות</th>
+        <th style="width:${COL_DATE}px;border:1px solid #000;font-size:10px;text-align:center;vertical-align:middle;padding:2px 4px;">לביצוע עד...</th>
+        <th style="width:${COL_DESC}px;border:1px solid #000;font-size:10px;text-align:center;vertical-align:middle;padding:2px 4px;">הסיכום</th>
+        <th style="width:${COL_NUM}px;border:1px solid #000;font-size:10px;text-align:center;vertical-align:middle;padding:2px 4px;">ס'פ</th>
+      </tr>
+    </thead>
+    <tbody style="border:1px solid #000;">
+      ${rows}
+    </tbody>
+  </table>`;
+  }
+
+  const page1Tasks = data.tasks.slice(0, P1_MAX);
+  const page2Tasks = data.tasks.slice(P1_MAX, P1_MAX + P2_MAX);
+  const needsPage2 = data.tasks.length > P1_MAX;
+
+  const commonStyle = `
+    @page { size: A4; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 10px; color: #000;
+           print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .page { width: ${PAGE_W}px; height: ${PAGE_H}px; position: relative;
+            overflow: hidden; page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    .bg { position: absolute; top: 0; left: 0; width: ${PAGE_W}px; height: ${PAGE_H}px; z-index: 0; }
+    td { border: 1px solid #000; background: transparent; }`;
+
+  const page1 = `
+  <div class="page">
+    <img class="bg" src="${baseUrl}/bg00001.jpg" />
+
+    <span style="position:absolute;top:132.6px;left:66.5px;z-index:1;font-size:10px;direction:ltr;">${data.date}</span>
+    <span style="position:absolute;top:165.6px;right:26px;z-index:1;font-size:10px;direction:rtl;">לכבוד רשימת התפוצה</span>
+    <span style="position:absolute;top:199.9px;left:0;width:${PAGE_W}px;text-align:center;z-index:1;font-weight:bold;text-decoration:underline;font-size:10.5px;direction:rtl;">
+      הנדון – ${data.project} – סיכום פגישה שבועית - מתאריך ${data.date}
+    </span>
+    <span style="position:absolute;top:234.5px;right:26px;z-index:1;font-size:10px;direction:rtl;">משתתפים : ${data.participants}</span>
+    ${data.description ? `<span style="position:absolute;top:268.9px;right:26px;z-index:1;font-size:10px;direction:rtl;max-width:600px;">בשלב ביצוע הפגישה : ${data.description}</span>` : ''}
+    <span style="position:absolute;top:290.2px;right:26px;z-index:1;font-size:10px;direction:rtl;">להלן הסיכומים:-</span>
+
+    ${makeTable(P1_TABLE_TOP, makeRows(page1Tasks, 0, P1_ROW_H, P1_MAX))}
+  </div>`;
+
+  const page2 = needsPage2 ? `
+  <div class="page">
+    <img class="bg" src="${baseUrl}/bg00002.jpg" />
+    ${makeTable(P2_TABLE_TOP, makeRows(page2Tasks, P1_MAX, P2_ROW_H, P2_MAX))}
+  </div>` : '';
 
   return `<!DOCTYPE html>
 <html lang="he">
 <head>
   <meta charset="UTF-8">
-  <style>
-    @page { size: A4; margin: 0; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: ${PAGE_W}px; height: 1123px; overflow: hidden; }
-    body {
-      position: relative;
-      font-family: Arial, sans-serif;
-      font-size: 10px;
-      color: #000;
-      print-color-adjust: exact;
-      -webkit-print-color-adjust: exact;
-    }
-    /* Full-page background image — the actual letterhead */
-    .bg {
-      position: absolute; top: 0; left: 0;
-      width: ${PAGE_W}px; height: 1123px;
-      z-index: 0;
-    }
-    /* Text overlay layer */
-    .layer {
-      position: absolute; top: 0; left: 0;
-      width: ${PAGE_W}px; height: 1123px;
-      z-index: 1;
-    }
-    /* Tasks table overlaid on top of the background grid */
-    .task-table {
-      position: absolute;
-      top: ${TABLE_TOP}px;
-      left: ${TABLE_LEFT}px;
-      width: ${TABLE_W}px;
-      border-collapse: collapse;
-      direction: rtl;
-    }
-    .task-table th, .task-table td {
-      border: 1px solid #000;
-      background: transparent;
-    }
-    .task-table thead tr {
-      height: ${HEADER_ROW_H}px;
-    }
-    .task-table thead th {
-      font-size: 10px;
-      font-weight: bold;
-      text-align: center;
-      vertical-align: middle;
-      padding: 2px 4px;
-    }
-    .task-table tbody tr {
-      height: ${ROW_H}px;
-    }
-    @media print {
-      html, body { width: ${PAGE_W}px; height: 1123px; }
-    }
-  </style>
+  <style>${commonStyle}</style>
 </head>
 <body>
-
-  <!-- Original letterhead background (logo, chevron, footer) -->
-  <img class="bg" src="${baseUrl}/bg00001.jpg" />
-
-  <div class="layer">
-
-    <!-- Date — top left, LTR -->
-    <span style="position:absolute;top:132.6px;left:66.5px;font-size:10px;direction:ltr;">${data.date}</span>
-
-    <!-- לכבוד רשימת התפוצה — right-aligned -->
-    <span style="position:absolute;top:165.6px;right:26px;font-size:10px;direction:rtl;">לכבוד רשימת התפוצה</span>
-
-    <!-- Subject line — centered, bold, underlined -->
-    <span style="position:absolute;top:199.9px;left:0;width:${PAGE_W}px;text-align:center;font-weight:bold;text-decoration:underline;font-size:10.5px;direction:rtl;">
-      הנדון – ${data.project} – סיכום פגישה שבועית - מתאריך ${data.date}
-    </span>
-
-    <!-- Participants -->
-    <span style="position:absolute;top:234.5px;right:26px;font-size:10px;direction:rtl;">
-      משתתפים : ${data.participants}
-    </span>
-
-    <!-- Optional description -->
-    ${data.description ? `
-    <span style="position:absolute;top:268.9px;right:26px;font-size:10px;direction:rtl;max-width:600px;">
-      בשלב ביצוע הפגישה : ${data.description}
-    </span>` : ''}
-
-    <!-- להלן הסיכומים -->
-    <span style="position:absolute;top:290.2px;right:26px;font-size:10px;direction:rtl;">להלן הסיכומים:-</span>
-
-  </div>
-
-  <!-- Tasks table, overlaid on the background grid -->
-  <table class="task-table">
-    <thead>
-      <tr>
-        <th style="width:${COL_RESP}px;">אחריות</th>
-        <th style="width:${COL_DATE}px;">לביצוע עד...</th>
-        <th style="width:${COL_DESC}px;">הסיכום</th>
-        <th style="width:${COL_NUM}px;">ס'פ</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows}
-      ${emptyRows}
-    </tbody>
-  </table>
-
+  ${page1}
+  ${page2}
   <script>window.onload = () => window.print();</script>
 </body>
 </html>`;
