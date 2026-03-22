@@ -81,20 +81,12 @@ function buildPdfHtml(data, bg1, bg2) {
   const page2Tasks = data.tasks.slice(P1_MAX, P1_MAX + P2_MAX);
   const needsPage2 = data.tasks.length > P1_MAX;
 
-  const commonStyle = `
-    @page { size: A4; margin: 0; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 10px; color: #000;
-           print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-    .page { width: ${PAGE_W}px; height: ${PAGE_H}px; position: relative;
-            overflow: hidden; page-break-after: always; }
-    .page:last-child { page-break-after: auto; }
-    .bg { position: absolute; top: 0; left: 0; width: ${PAGE_W}px; height: ${PAGE_H}px; z-index: 0; }
-    td { border: 1px solid #000; background: transparent; }`;
+  const pageStyle = `width:${PAGE_W}px;height:${PAGE_H}px;position:relative;overflow:hidden;`;
+  const bgStyle   = `position:absolute;top:0;left:0;width:${PAGE_W}px;height:${PAGE_H}px;z-index:0;`;
 
   const page1 = `
-  <div class="page">
-    <img class="bg" src="${bg1}" />
+  <div style="${pageStyle}">
+    <img style="${bgStyle}" src="${bg1}" />
 
     <span style="position:absolute;top:132.6px;left:66.5px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:ltr;">${data.date}</span>
     <span style="position:absolute;top:165.6px;right:26px;z-index:1;font-size:14px;font-family:Arial,sans-serif;direction:rtl;">לכבוד רשימת התפוצה</span>
@@ -107,18 +99,15 @@ function buildPdfHtml(data, bg1, bg2) {
   </div>`;
 
   const page2 = needsPage2 ? `
-  <div class="page">
-    <img class="bg" src="${bg2}" />
+  <div style="${pageStyle}">
+    <img style="${bgStyle}" src="${bg2}" />
     ${makeTable(P2_TABLE_TOP, makeRows(page2Tasks, P1_MAX, P2_ROW_H, P2_MAX))}
   </div>` : '';
 
   return `<!DOCTYPE html>
 <html lang="he">
-<head>
-  <meta charset="UTF-8">
-  <style>${commonStyle}</style>
-</head>
-<body>
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;">
   ${page1}
   ${page2}
 </body>
@@ -187,7 +176,6 @@ export default function Home() {
   async function generatePDF() {
     setPdfGenerating(true);
     const container = document.createElement('div');
-    const tmpStyle = document.createElement('style');
     try {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
         import('html2canvas'),
@@ -207,15 +195,11 @@ export default function Home() {
       const parser = new DOMParser();
       const parsed = parser.parseFromString(html, 'text/html');
 
-      // Inject PDF styles temporarily
-      tmpStyle.textContent = parsed.querySelector('style').textContent;
-      document.head.appendChild(tmpStyle);
-
-      // Hidden off-screen container in the main document
-      container.style.cssText = 'position:fixed;top:0;left:-9999px;z-index:-1;width:794px;';
+      // Hidden off-screen container — all styles are inline, no style injection needed
+      container.style.cssText = 'position:fixed;top:0;left:-9999px;width:794px;';
       document.body.appendChild(container);
 
-      parsed.querySelectorAll('.page').forEach(page => {
+      parsed.querySelectorAll('body > div').forEach(page => {
         container.appendChild(document.adoptNode(page));
       });
 
@@ -238,7 +222,6 @@ export default function Home() {
       alert('שגיאה ביצירת ה-PDF:\n' + (e?.message || e));
     } finally {
       if (container.parentNode) document.body.removeChild(container);
-      if (tmpStyle.parentNode) document.head.removeChild(tmpStyle);
       setPdfGenerating(false);
     }
   }
