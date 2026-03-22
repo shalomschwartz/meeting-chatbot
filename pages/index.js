@@ -9,11 +9,12 @@ function buildPdfHtml(data, baseUrl) {
   const TABLE_W      = 643.454102;
   const HEADER_ROW_H = 27.362671;
 
-  // Column widths — RTL visual order: אחריות | לביצוע עד | הסיכום | ס'פ
-  const COL_NUM  = 40;
-  const COL_DESC = 371;
-  const COL_DATE = 116;
-  const COL_RESP = 116;
+  // Column widths matching the background image grid lines exactly
+  // RTL visual order (right→left): אחריות | לביצוע עד | הסיכום | ס'פ
+  const COL_RESP = 103;   // אחריות
+  const COL_DATE = 103;   // לביצוע עד
+  const COL_DESC = 392;   // הסיכום  (wide)
+  const COL_NUM  = 45;    // ס'פ     (narrow)
 
   // Page 1: table starts lower (below date/subject/participants text)
   const P1_TABLE_TOP = 324.577484;
@@ -30,7 +31,7 @@ function buildPdfHtml(data, baseUrl) {
   const P2_ROW_H     = P2_DATA_H / P2_MAX;
 
   const tdStyle = (w, align = 'center') =>
-    `style="width:${w}px;text-align:${align};vertical-align:middle;padding:3px 6px;font-size:9.5px;"`;
+    `style="width:${w}px;text-align:${align};vertical-align:middle;padding:3px 6px;font-size:9.5px;background:white;"`;
 
   function makeRows(tasks, startIdx, rowH, maxRows) {
     const filled = tasks.map((task, i) => `
@@ -43,7 +44,10 @@ function buildPdfHtml(data, baseUrl) {
 
     const empty = Array.from({ length: maxRows - tasks.length }, () => `
     <tr style="height:${rowH}px;">
-      <td></td><td></td><td></td><td></td>
+      <td style="background:white;"></td>
+      <td style="background:white;"></td>
+      <td style="background:white;"></td>
+      <td style="background:white;"></td>
     </tr>`).join('');
 
     return filled + empty;
@@ -55,10 +59,10 @@ function buildPdfHtml(data, baseUrl) {
                 border-collapse:collapse;direction:rtl;z-index:1;">
     <thead>
       <tr style="height:${HEADER_ROW_H}px;">
-        <th style="width:${COL_RESP}px;border:1px solid #000;font-size:10px;text-align:center;vertical-align:middle;padding:2px 4px;">אחריות</th>
-        <th style="width:${COL_DATE}px;border:1px solid #000;font-size:10px;text-align:center;vertical-align:middle;padding:2px 4px;">לביצוע עד...</th>
-        <th style="width:${COL_DESC}px;border:1px solid #000;font-size:10px;text-align:center;vertical-align:middle;padding:2px 4px;">הסיכום</th>
-        <th style="width:${COL_NUM}px;border:1px solid #000;font-size:10px;text-align:center;vertical-align:middle;padding:2px 4px;">ס'פ</th>
+        <th style="width:${COL_RESP}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">אחריות</th>
+        <th style="width:${COL_DATE}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">לביצוע עד...</th>
+        <th style="width:${COL_DESC}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">הסיכום</th>
+        <th style="width:${COL_NUM}px;border:1px solid #000;font-size:10px;font-weight:bold;text-align:center;vertical-align:middle;padding:2px 4px;background:white;">ס'פ</th>
       </tr>
     </thead>
     <tbody style="border:1px solid #000;">
